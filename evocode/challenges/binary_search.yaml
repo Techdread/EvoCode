@@ -1,0 +1,56 @@
+id: binary_search
+name: "Binary Search"
+language: python
+difficulty: medium
+description: |
+  Implement binary search to find a target value in a sorted array.
+
+  Write a function binary_search(nums, target) that returns the index of target in nums, or -1 if not found.
+
+  The array is sorted in ascending order.
+
+  You must implement the binary search algorithm (O(log n) time complexity).
+
+  Input format:
+  - First line: space-separated sorted integers
+  - Second line: target value to find
+
+  Examples:
+  - nums = [1, 3, 5, 7, 9], target = 5 → 2
+  - nums = [1, 3, 5, 7, 9], target = 4 → -1
+
+template: |
+  def binary_search(nums: list[int], target: int) -> int:
+      pass
+
+runner: |
+  {{solution}}
+  nums = list(map(int, input().split()))
+  target = int(input())
+  print(binary_search(nums, target))
+
+test_cases:
+  - input: "1 3 5 7 9\n5"
+    expected: "2"
+  - input: "1 3 5 7 9\n4"
+    expected: "-1"
+  - input: "2 4 6 8 10\n10"
+    expected: "4"
+
+hidden_tests:
+  - input: "1\n1"
+    expected: "0"
+  - input: "1 2\n1"
+    expected: "0"
+  - input: "1 2\n2"
+    expected: "1"
+  - input: "1 2 3 4 5 6 7 8 9 10\n1"
+    expected: "0"
+  - input: "1 2 3 4 5 6 7 8 9 10\n10"
+    expected: "9"
+  - input: "1 2 3 4 5 6 7 8 9 10\n5"
+    expected: "4"
+  - input: "1 2 3 4 5 6 7 8 9 10\n11"
+    expected: "-1"
+  - input: "5\n3"
+    expected: "-1"

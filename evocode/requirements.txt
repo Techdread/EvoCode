@@ -1,0 +1,16 @@
+# EvoCode dependencies
+
+# Web UI
+streamlit>=1.30.0
+
+# Data processing
+pandas>=2.0.0
+
+# Configuration
+pyyaml>=6.0
+
+# HTTP client (for LLM and Judge0 APIs)
+requests>=2.28.0
+
+# Charts (optional, streamlit includes plotly)
+plotly>=5.0.0

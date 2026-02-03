@@ -1,0 +1,65 @@
+id: roman_numerals
+name: "Roman Numeral Converter"
+language: python
+difficulty: medium
+description: |
+  Write a function `to_roman(n)` that converts an integer to its Roman numeral representation.
+
+  Roman numerals use these symbols:
+  - I = 1
+  - V = 5
+  - X = 10
+  - L = 50
+  - C = 100
+  - D = 500
+  - M = 1000
+
+  Subtractive notation is used where:
+  - IV = 4, IX = 9
+  - XL = 40, XC = 90
+  - CD = 400, CM = 900
+
+  The input will be between 1 and 3999 inclusive.
+
+template: |
+  def to_roman(n: int) -> str:
+      pass
+
+runner: |
+  {{solution}}
+  n = int(input())
+  print(to_roman(n))
+
+test_cases:
+  - input: "1"
+    expected: "I"
+  - input: "4"
+    expected: "IV"
+  - input: "9"
+    expected: "IX"
+  - input: "58"
+    expected: "LVIII"
+  - input: "1994"
+    expected: "MCMXCIV"
+
+hidden_tests:
+  - input: "3"
+    expected: "III"
+  - input: "40"
+    expected: "XL"
+  - input: "90"
+    expected: "XC"
+  - input: "400"
+    expected: "CD"
+  - input: "900"
+    expected: "CM"
+  - input: "999"
+    expected: "CMXCIX"
+  - input: "3999"
+    expected: "MMMCMXCIX"
+  - input: "2024"
+    expected: "MMXXIV"
+  - input: "1776"
+    expected: "MDCCLXXVI"
+  - input: "444"
+    expected: "CDXLIV"

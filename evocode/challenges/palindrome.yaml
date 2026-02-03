@@ -1,0 +1,52 @@
+id: palindrome
+name: "Palindrome Check"
+language: python
+difficulty: easy
+description: |
+  Write a function is_palindrome(s) that returns True if the given string is a palindrome, False otherwise.
+
+  A palindrome is a string that reads the same forwards and backwards.
+
+  For this problem:
+  - Consider only alphanumeric characters (ignore spaces and punctuation)
+  - Comparison should be case-insensitive
+
+  Examples:
+  - "A man a plan a canal Panama" → True
+  - "race a car" → False
+  - "Was it a car or a cat I saw?" → True
+
+template: |
+  def is_palindrome(s: str) -> bool:
+      pass
+
+runner: |
+  {{solution}}
+  s = input()
+  print("True" if is_palindrome(s) else "False")
+
+test_cases:
+  - input: "A man a plan a canal Panama"
+    expected: "True"
+  - input: "race a car"
+    expected: "False"
+  - input: "racecar"
+    expected: "True"
+
+hidden_tests:
+  - input: "Was it a car or a cat I saw?"
+    expected: "True"
+  - input: "hello"
+    expected: "False"
+  - input: "a"
+    expected: "True"
+  - input: ""
+    expected: "True"
+  - input: "No 'x' in Nixon"
+    expected: "True"
+  - input: "12321"
+    expected: "True"
+  - input: "12345"
+    expected: "False"
+  - input: "Able was I ere I saw Elba"
+    expected: "True"
