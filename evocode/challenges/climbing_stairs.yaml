@@ -1,0 +1,43 @@
+id: climbing_stairs
+name: "Climbing Stairs"
+language: python
+difficulty: easy
+description: |
+  You are climbing a staircase. It takes n steps to reach the top.
+
+  Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?
+
+  Examples:
+  - n=2 → 2 (1+1 or 2)
+  - n=3 → 3 (1+1+1, 1+2, or 2+1)
+
+  Constraints: 1 <= n <= 45
+
+template: |
+  def climb_stairs(n: int) -> int:
+      pass
+
+runner: |
+  {{solution}}
+  n = int(input())
+  print(climb_stairs(n))
+
+test_cases:
+  - input: "2"
+    expected: "2"
+  - input: "3"
+    expected: "3"
+  - input: "4"
+    expected: "5"
+
+hidden_tests:
+  - input: "1"
+    expected: "1"
+  - input: "5"
+    expected: "8"
+  - input: "10"
+    expected: "89"
+  - input: "20"
+    expected: "10946"
+  - input: "30"
+    expected: "1346269"

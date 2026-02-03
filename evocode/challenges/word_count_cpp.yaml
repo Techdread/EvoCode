@@ -1,0 +1,56 @@
+id: word_count_cpp
+name: "Word Frequency Counter (C++)"
+language: cpp
+difficulty: medium
+description: |
+  Given a line of text, count the frequency of each word and output them sorted alphabetically.
+
+  Words are case-insensitive (convert to lowercase).
+  Words are separated by spaces.
+
+  Output format: Each line should be "word count" sorted alphabetically by word.
+
+template: |
+  #include <map>
+  #include <string>
+  #include <vector>
+
+  std::map<std::string, int> wordCount(const std::string& text) {
+      // Your code here
+  }
+
+runner: |
+  #include <iostream>
+  #include <sstream>
+  #include <map>
+  #include <string>
+  #include <algorithm>
+  #include <cctype>
+  using namespace std;
+
+  {{solution}}
+
+  int main() {
+      string line;
+      getline(cin, line);
+
+      auto counts = wordCount(line);
+      for (const auto& pair : counts) {
+          cout << pair.first << " " << pair.second << endl;
+      }
+      return 0;
+  }
+
+test_cases:
+  - input: "hello world hello"
+    expected: "hello 2\nworld 1"
+  - input: "The quick brown fox the"
+    expected: "brown 1\nfox 1\nquick 1\nthe 2"
+
+hidden_tests:
+  - input: "a a a b b c"
+    expected: "a 3\nb 2\nc 1"
+  - input: "Hello HELLO hello"
+    expected: "hello 3"
+  - input: "one"
+    expected: "one 1"

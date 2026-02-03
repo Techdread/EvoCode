@@ -1,0 +1,49 @@
+id: longest_common_prefix
+name: "Longest Common Prefix"
+language: python
+difficulty: easy
+description: |
+  Write a function to find the longest common prefix string amongst an array of strings.
+
+  If there is no common prefix, return an empty string "".
+
+  Input: Space-separated strings
+  Output: The longest common prefix
+
+  Examples:
+  - Input: "flower flow flight"
+  - Output: "fl"
+
+  - Input: "dog racecar car"
+  - Output: ""
+
+template: |
+  def longest_common_prefix(strs: list[str]) -> str:
+      pass
+
+runner: |
+  {{solution}}
+  strs = input().split()
+  print(longest_common_prefix(strs))
+
+test_cases:
+  - input: "flower flow flight"
+    expected: "fl"
+  - input: "dog racecar car"
+    expected: ""
+  - input: "interspecies interstellar interstate"
+    expected: "inters"
+
+hidden_tests:
+  - input: "a"
+    expected: "a"
+  - input: "ab abc"
+    expected: "ab"
+  - input: "abc abc abc"
+    expected: "abc"
+  - input: "reflower flow flight"
+    expected: ""
+  - input: "aa aa aa aa"
+    expected: "aa"
+  - input: "c acc ccc"
+    expected: ""

@@ -1,0 +1,45 @@
+id: reverse_linked_list_js
+name: "Reverse Array In-Place (JavaScript)"
+language: javascript
+difficulty: easy
+description: |
+  Write a function reverseArray(arr) that reverses an array in-place and returns it.
+
+  Do not use the built-in reverse() method.
+
+  Input: Space-separated integers
+  Output: Space-separated integers (reversed)
+
+template: |
+  function reverseArray(arr) {
+      // Your code here
+  }
+
+runner: |
+  {{solution}}
+  const readline = require('readline');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.on('line', (line) => {
+      const arr = line.split(' ').map(Number);
+      const result = reverseArray(arr);
+      console.log(result.join(' '));
+      rl.close();
+  });
+
+test_cases:
+  - input: "1 2 3 4 5"
+    expected: "5 4 3 2 1"
+  - input: "1"
+    expected: "1"
+  - input: "1 2"
+    expected: "2 1"
+
+hidden_tests:
+  - input: "10 20 30 40"
+    expected: "40 30 20 10"
+  - input: "1 1 1 1"
+    expected: "1 1 1 1"
+  - input: "5 4 3 2 1"
+    expected: "1 2 3 4 5"
+  - input: "100"
+    expected: "100"

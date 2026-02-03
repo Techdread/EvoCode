@@ -1,0 +1,49 @@
+id: power_of_two
+name: "Power of Two"
+language: python
+difficulty: easy
+description: |
+  Given an integer n, return True if it is a power of two. Otherwise, return False.
+
+  An integer n is a power of two if there exists an integer x such that n == 2^x.
+
+  Examples:
+  - n=1 → True (2^0 = 1)
+  - n=16 → True (2^4 = 16)
+  - n=3 → False
+  - n=0 → False
+
+template: |
+  def is_power_of_two(n: int) -> bool:
+      pass
+
+runner: |
+  {{solution}}
+  n = int(input())
+  print("True" if is_power_of_two(n) else "False")
+
+test_cases:
+  - input: "1"
+    expected: "True"
+  - input: "16"
+    expected: "True"
+  - input: "3"
+    expected: "False"
+
+hidden_tests:
+  - input: "0"
+    expected: "False"
+  - input: "2"
+    expected: "True"
+  - input: "4"
+    expected: "True"
+  - input: "8"
+    expected: "True"
+  - input: "6"
+    expected: "False"
+  - input: "1024"
+    expected: "True"
+  - input: "1023"
+    expected: "False"
+  - input: "-16"
+    expected: "False"

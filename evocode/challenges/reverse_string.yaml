@@ -1,0 +1,40 @@
+id: reverse_string
+name: "Reverse String"
+language: python
+difficulty: easy
+description: |
+  Write a function reverse_string(s) that reverses a string in-place.
+
+  You must do this by modifying the input list of characters (not returning a new string).
+
+  Input: A string
+  Output: The reversed string
+
+template: |
+  def reverse_string(s: str) -> str:
+      pass
+
+runner: |
+  {{solution}}
+  s = input()
+  print(reverse_string(s))
+
+test_cases:
+  - input: "hello"
+    expected: "olleh"
+  - input: "Hannah"
+    expected: "hannaH"
+  - input: "a"
+    expected: "a"
+
+hidden_tests:
+  - input: ""
+    expected: ""
+  - input: "ab"
+    expected: "ba"
+  - input: "racecar"
+    expected: "racecar"
+  - input: "12345"
+    expected: "54321"
+  - input: "A man a plan"
+    expected: "nalp a nam A"

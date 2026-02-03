@@ -1,0 +1,54 @@
+id: atoi
+name: "String to Integer (atoi)"
+language: python
+difficulty: medium
+description: |
+  Implement the atoi function, which converts a string to a 32-bit signed integer.
+
+  The algorithm:
+  1. Skip leading whitespace
+  2. Check for optional '+' or '-' sign
+  3. Read digits until non-digit or end
+  4. Clamp to 32-bit signed integer range [-2^31, 2^31-1]
+
+  Examples:
+  - "42" → 42
+  - "   -42" → -42
+  - "4193 with words" → 4193
+  - "words and 987" → 0
+  - "-91283472332" → -2147483648 (clamped)
+
+template: |
+  def my_atoi(s: str) -> int:
+      pass
+
+runner: |
+  {{solution}}
+  s = input()
+  print(my_atoi(s))
+
+test_cases:
+  - input: "42"
+    expected: "42"
+  - input: "   -42"
+    expected: "-42"
+  - input: "4193 with words"
+    expected: "4193"
+
+hidden_tests:
+  - input: "words and 987"
+    expected: "0"
+  - input: "-91283472332"
+    expected: "-2147483648"
+  - input: "91283472332"
+    expected: "2147483647"
+  - input: "  +123"
+    expected: "123"
+  - input: "+-12"
+    expected: "0"
+  - input: "   "
+    expected: "0"
+  - input: ""
+    expected: "0"
+  - input: "00000123"
+    expected: "123"

@@ -1,0 +1,49 @@
+id: prime_factors
+name: "Prime Factorization"
+language: python
+difficulty: medium
+description: |
+  Given a positive integer n, return its prime factorization as a sorted list of prime factors.
+
+  Include duplicates if a prime divides n multiple times.
+
+  Examples:
+  - n=12 → [2, 2, 3] (because 12 = 2 × 2 × 3)
+  - n=100 → [2, 2, 5, 5] (because 100 = 2 × 2 × 5 × 5)
+  - n=17 → [17] (17 is prime)
+
+  Output as space-separated numbers.
+
+template: |
+  def prime_factors(n: int) -> list[int]:
+      pass
+
+runner: |
+  {{solution}}
+  n = int(input())
+  result = prime_factors(n)
+  print(" ".join(map(str, result)))
+
+test_cases:
+  - input: "12"
+    expected: "2 2 3"
+  - input: "100"
+    expected: "2 2 5 5"
+  - input: "17"
+    expected: "17"
+
+hidden_tests:
+  - input: "2"
+    expected: "2"
+  - input: "1"
+    expected: ""
+  - input: "36"
+    expected: "2 2 3 3"
+  - input: "97"
+    expected: "97"
+  - input: "1000"
+    expected: "2 2 2 5 5 5"
+  - input: "84"
+    expected: "2 2 3 7"
+  - input: "999"
+    expected: "3 3 3 37"

@@ -1,0 +1,52 @@
+id: anagram_check
+name: "Valid Anagram"
+language: python
+difficulty: easy
+description: |
+  Given two strings s and t, return True if t is an anagram of s, and False otherwise.
+
+  An anagram is a word formed by rearranging the letters of another word,
+  using all the original letters exactly once.
+
+  Input: Two lines, each containing a string
+  Output: "True" or "False"
+
+  Examples:
+  - s="anagram", t="nagaram" → True
+  - s="rat", t="car" → False
+
+template: |
+  def is_anagram(s: str, t: str) -> bool:
+      pass
+
+runner: |
+  {{solution}}
+  s = input()
+  t = input()
+  print("True" if is_anagram(s, t) else "False")
+
+test_cases:
+  - input: "anagram\nnagaram"
+    expected: "True"
+  - input: "rat\ncar"
+    expected: "False"
+  - input: "listen\nsilent"
+    expected: "True"
+
+hidden_tests:
+  - input: "a\na"
+    expected: "True"
+  - input: "a\nab"
+    expected: "False"
+  - input: "\n"
+    expected: "True"
+  - input: "aabb\nbbaa"
+    expected: "True"
+  - input: "aabb\nabab"
+    expected: "True"
+  - input: "abc\ncba"
+    expected: "True"
+  - input: "abc\nabc"
+    expected: "True"
+  - input: "aacc\ncccc"
+    expected: "False"

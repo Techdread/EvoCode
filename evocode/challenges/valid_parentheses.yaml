@@ -1,0 +1,56 @@
+id: valid_parentheses
+name: "Valid Parentheses"
+language: python
+difficulty: easy
+description: |
+  Given a string s containing just the characters '(', ')', '{', '}', '[' and ']',
+  determine if the input string is valid.
+
+  An input string is valid if:
+  1. Open brackets must be closed by the same type of brackets.
+  2. Open brackets must be closed in the correct order.
+  3. Every close bracket has a corresponding open bracket of the same type.
+
+  Return "True" if valid, "False" otherwise.
+
+  Examples:
+  - "()" → True
+  - "()[]{}" → True
+  - "(]" → False
+  - "([)]" → False
+  - "{[]}" → True
+
+template: |
+  def is_valid(s: str) -> bool:
+      pass
+
+runner: |
+  {{solution}}
+  s = input()
+  print("True" if is_valid(s) else "False")
+
+test_cases:
+  - input: "()"
+    expected: "True"
+  - input: "()[]{}"
+    expected: "True"
+  - input: "(]"
+    expected: "False"
+
+hidden_tests:
+  - input: "([)]"
+    expected: "False"
+  - input: "{[]}"
+    expected: "True"
+  - input: ""
+    expected: "True"
+  - input: "["
+    expected: "False"
+  - input: "]"
+    expected: "False"
+  - input: "((((([[[{{{}}}}]]])))))"
+    expected: "False"
+  - input: "({[]})"
+    expected: "True"
+  - input: "((()))"
+    expected: "True"

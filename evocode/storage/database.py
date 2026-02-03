@@ -180,7 +180,13 @@ class Database:
         return [dict(row) for row in rows]
 
     def clear_test_cases(self, challenge_id: str):
-        """Remove all test cases for a challenge."""
+        """Remove all test cases for a challenge (and their test results)."""
+        # First delete test_results that reference these test_cases
+        self.execute("""
+            DELETE FROM test_results
+            WHERE test_case_id IN (SELECT id FROM test_cases WHERE challenge_id = ?)
+        """, (challenge_id,))
+        # Then delete the test_cases
         self.execute("DELETE FROM test_cases WHERE challenge_id = ?", (challenge_id,))
 
     def delete_challenge(self, challenge_id: str):

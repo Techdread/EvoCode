@@ -1,0 +1,57 @@
+id: lru_cache
+name: "LRU Cache"
+language: python
+difficulty: hard
+description: |
+  Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.
+
+  Implement the LRUCache class:
+  - LRUCache(capacity) Initialize the LRU cache with positive size capacity.
+  - get(key) Return the value of the key if it exists, otherwise return -1.
+  - put(key, value) Update the value of the key if it exists. Otherwise, add the key-value pair.
+    If the number of keys exceeds capacity, evict the least recently used key.
+
+  Both get and put must run in O(1) average time complexity.
+
+  Input format:
+  - First line: capacity
+  - Following lines: "get key" or "put key value"
+
+  Output: For each get operation, output the result on a new line.
+
+template: |
+  class LRUCache:
+      def __init__(self, capacity: int):
+          pass
+
+      def get(self, key: int) -> int:
+          pass
+
+      def put(self, key: int, value: int) -> None:
+          pass
+
+runner: |
+  {{solution}}
+
+  capacity = int(input())
+  cache = LRUCache(capacity)
+
+  import sys
+  for line in sys.stdin:
+      parts = line.strip().split()
+      if not parts:
+          continue
+      if parts[0] == "get":
+          print(cache.get(int(parts[1])))
+      elif parts[0] == "put":
+          cache.put(int(parts[1]), int(parts[2]))
+
+test_cases:
+  - input: "2\nput 1 1\nput 2 2\nget 1\nput 3 3\nget 2\nput 4 4\nget 1\nget 3\nget 4"
+    expected: "1\n-1\n-1\n3\n4"
+
+hidden_tests:
+  - input: "1\nput 1 1\nget 1\nput 2 2\nget 1\nget 2"
+    expected: "1\n-1\n2"
+  - input: "2\nget 1\nput 1 10\nget 1\nput 2 20\nput 3 30\nget 1\nget 2\nget 3"
+    expected: "-1\n10\n-1\n20\n30"

@@ -1,0 +1,53 @@
+id: fizzbuzz_java
+name: "FizzBuzz (Java)"
+language: java
+difficulty: easy
+description: |
+  Write a method fizzbuzz(int n) that returns a String based on the following rules:
+
+  - If n is divisible by 3, return "Fizz"
+  - If n is divisible by 5, return "Buzz"
+  - If n is divisible by both 3 and 5, return "FizzBuzz"
+  - Otherwise, return the number as a string
+
+template: |
+  public static String fizzbuzz(int n) {
+      // Your code here
+  }
+
+runner: |
+  import java.util.Scanner;
+
+  public class Main {
+      {{solution}}
+
+      public static void main(String[] args) {
+          Scanner scanner = new Scanner(System.in);
+          int n = scanner.nextInt();
+          System.out.println(fizzbuzz(n));
+      }
+  }
+
+test_cases:
+  - input: "1"
+    expected: "1"
+  - input: "3"
+    expected: "Fizz"
+  - input: "5"
+    expected: "Buzz"
+  - input: "15"
+    expected: "FizzBuzz"
+
+hidden_tests:
+  - input: "2"
+    expected: "2"
+  - input: "6"
+    expected: "Fizz"
+  - input: "10"
+    expected: "Buzz"
+  - input: "30"
+    expected: "FizzBuzz"
+  - input: "9"
+    expected: "Fizz"
+  - input: "25"
+    expected: "Buzz"

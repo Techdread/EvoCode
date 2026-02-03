@@ -1,0 +1,57 @@
+id: spiral_matrix
+name: "Spiral Matrix"
+language: python
+difficulty: medium
+description: |
+  Given an m x n matrix, return all elements of the matrix in spiral order.
+
+  Spiral order means: right → down → left → up → repeat
+
+  Input format:
+  - First line: rows cols
+  - Following lines: matrix rows (space-separated values)
+
+  Output: Space-separated elements in spiral order.
+
+  Example:
+  Input:
+  3 3
+  1 2 3
+  4 5 6
+  7 8 9
+
+  Output: 1 2 3 6 9 8 7 4 5
+
+template: |
+  def spiral_order(matrix: list[list[int]]) -> list[int]:
+      pass
+
+runner: |
+  {{solution}}
+
+  first_line = input().split()
+  rows, cols = int(first_line[0]), int(first_line[1])
+
+  matrix = []
+  for _ in range(rows):
+      row = list(map(int, input().split()))
+      matrix.append(row)
+
+  result = spiral_order(matrix)
+  print(" ".join(map(str, result)))
+
+test_cases:
+  - input: "3 3\n1 2 3\n4 5 6\n7 8 9"
+    expected: "1 2 3 6 9 8 7 4 5"
+  - input: "3 4\n1 2 3 4\n5 6 7 8\n9 10 11 12"
+    expected: "1 2 3 4 8 12 11 10 9 5 6 7"
+
+hidden_tests:
+  - input: "1 4\n1 2 3 4"
+    expected: "1 2 3 4"
+  - input: "4 1\n1\n2\n3\n4"
+    expected: "1 2 3 4"
+  - input: "1 1\n5"
+    expected: "5"
+  - input: "2 2\n1 2\n3 4"
+    expected: "1 2 4 3"
