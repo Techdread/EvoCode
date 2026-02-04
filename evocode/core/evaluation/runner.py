@@ -68,6 +68,7 @@ class EvaluationRunner:
         challenge: Challenge,
         model_id: int,
         progress_callback: Optional[Callable[[int, float, str], None]] = None,
+        run_id: Optional[int] = None,
     ) -> EvaluationResult:
         """
         Run evaluation for a challenge.
@@ -76,18 +77,20 @@ class EvaluationRunner:
             challenge: The challenge to solve
             model_id: Database ID of the LLM model
             progress_callback: Optional callback(attempt_number, fitness, status)
+            run_id: Optional existing run_id (for batch runs)
 
         Returns:
             EvaluationResult with final status and all attempts
         """
-        # Create run record in database
-        run_id = 0
-        if self.db:
-            run_id = self.db.create_run(
-                challenge_id=challenge.id,
-                model_id=model_id,
-                max_attempts=self.max_attempts,
-            )
+        # Create run record in database (if not provided)
+        if run_id is None:
+            run_id = 0
+            if self.db:
+                run_id = self.db.create_run(
+                    challenge_id=challenge.id,
+                    model_id=model_id,
+                    max_attempts=self.max_attempts,
+                )
 
         result = EvaluationResult(
             run_id=run_id,
@@ -315,6 +318,7 @@ def run_evaluation(
     db: Optional[Database] = None,
     max_attempts: int = 10,
     progress_callback: Optional[Callable[[int, float, str], None]] = None,
+    run_id: Optional[int] = None,
 ) -> EvaluationResult:
     """
     Convenience function to run an evaluation.
@@ -327,6 +331,7 @@ def run_evaluation(
         db: Optional database instance
         max_attempts: Maximum attempts allowed
         progress_callback: Optional progress callback
+        run_id: Optional existing run_id (for batch runs)
 
     Returns:
         EvaluationResult
@@ -337,4 +342,4 @@ def run_evaluation(
         db=db,
         max_attempts=max_attempts,
     )
-    return runner.run(challenge, model_id, progress_callback)
+    return runner.run(challenge, model_id, progress_callback, run_id)

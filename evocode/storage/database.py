@@ -72,12 +72,32 @@ class Database:
 
     def init_schema(self):
         """Initialize database schema from migrations."""
+        conn = self.connect()
+
+        # Run initial migration
         migration_file = MIGRATIONS_DIR / "001_initial.sql"
         if migration_file.exists():
             sql = migration_file.read_text()
-            conn = self.connect()
             conn.executescript(sql)
             conn.commit()
+
+        # Run batch runs migration (handles ALTER TABLE gracefully)
+        batch_migration = MIGRATIONS_DIR / "002_batch_runs.sql"
+        if batch_migration.exists():
+            # Check if batch_runs table already exists
+            exists = self.fetchone(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='batch_runs'"
+            )
+            if not exists:
+                sql = batch_migration.read_text()
+                # SQLite doesn't support ALTER TABLE ADD COLUMN IF NOT EXISTS
+                # So we run it and catch the error if column already exists
+                try:
+                    conn.executescript(sql)
+                    conn.commit()
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        raise
 
     # LLM Models CRUD
     def add_model(
@@ -360,6 +380,115 @@ class Database:
         """Get recent evaluation runs with details."""
         rows = self.fetchall(f"SELECT * FROM v_recent_runs LIMIT ?", (limit,))
         return [dict(row) for row in rows]
+
+    # Batch Runs CRUD
+    def create_batch(self, name: Optional[str] = None, total_runs: int = 0) -> int:
+        """Create a new batch run."""
+        sql = """
+            INSERT INTO batch_runs (name, total_runs, status)
+            VALUES (?, ?, 'running')
+        """
+        cursor = self.execute(sql, (name, total_runs))
+        return cursor.lastrowid or 0
+
+    def update_batch(
+        self,
+        batch_id: int,
+        completed_runs: Optional[int] = None,
+        successful_runs: Optional[int] = None,
+        failed_runs: Optional[int] = None,
+        status: Optional[str] = None,
+        completed: bool = False,
+    ):
+        """Update a batch run."""
+        updates = []
+        params = []
+
+        if completed_runs is not None:
+            updates.append("completed_runs = ?")
+            params.append(completed_runs)
+        if successful_runs is not None:
+            updates.append("successful_runs = ?")
+            params.append(successful_runs)
+        if failed_runs is not None:
+            updates.append("failed_runs = ?")
+            params.append(failed_runs)
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+        if completed:
+            updates.append("completed_at = CURRENT_TIMESTAMP")
+
+        if updates:
+            sql = f"UPDATE batch_runs SET {', '.join(updates)} WHERE id = ?"
+            params.append(batch_id)
+            self.execute(sql, tuple(params))
+
+    def get_batch(self, batch_id: int) -> Optional[dict]:
+        """Get a batch run by ID."""
+        row = self.fetchone("SELECT * FROM batch_runs WHERE id = ?", (batch_id,))
+        return dict(row) if row else None
+
+    def get_batches(self, limit: int = 50) -> list[dict]:
+        """Get recent batch runs."""
+        rows = self.fetchall(
+            "SELECT * FROM batch_runs ORDER BY created_at DESC LIMIT ?", (limit,)
+        )
+        return [dict(row) for row in rows]
+
+    def get_batch_runs(self, batch_id: int) -> list[dict]:
+        """Get all evaluation runs for a batch."""
+        rows = self.fetchall(
+            """
+            SELECT r.*, c.name as challenge_name, c.language, c.difficulty,
+                   m.display_name as model_name
+            FROM evaluation_runs r
+            JOIN challenges c ON r.challenge_id = c.id
+            JOIN llm_models m ON r.model_id = m.id
+            WHERE r.batch_id = ?
+            ORDER BY r.started_at
+            """,
+            (batch_id,),
+        )
+        return [dict(row) for row in rows]
+
+    def create_run_with_batch(
+        self, challenge_id: str, model_id: int, batch_id: int, max_attempts: int = 10
+    ) -> int:
+        """Create a new evaluation run as part of a batch."""
+        sql = """
+            INSERT INTO evaluation_runs (challenge_id, model_id, batch_id, status, max_attempts)
+            VALUES (?, ?, ?, 'running', ?)
+        """
+        cursor = self.execute(sql, (challenge_id, model_id, batch_id, max_attempts))
+        return cursor.lastrowid or 0
+
+    def get_challenges_filtered(
+        self,
+        language: Optional[str] = None,
+        difficulty: Optional[str] = None,
+    ) -> list[dict]:
+        """Get challenges with optional filters."""
+        conditions = []
+        params = []
+
+        if language:
+            conditions.append("language = ?")
+            params.append(language)
+        if difficulty:
+            conditions.append("difficulty = ?")
+            params.append(difficulty)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        sql = f"SELECT * FROM challenges {where_clause} ORDER BY name"
+
+        rows = self.fetchall(sql, tuple(params))
+        return [dict(row) for row in rows]
+
+    def get_distinct_languages(self) -> list[str]:
+        """Get list of distinct languages from challenges."""
+        rows = self.fetchall("SELECT DISTINCT language FROM challenges ORDER BY language")
+        return [row["language"] for row in rows]
 
 
 # Singleton database instance
