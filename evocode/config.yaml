@@ -1,40 +1,27 @@
-# EvoCode Configuration
-
-# Judge0 settings
 judge0:
-  base_url: "http://localhost:2358"
+  base_url: http://localhost:2358
   timeout: 30
   cpu_time_limit: 5.0
   wall_time_limit: 15.0
-  memory_limit: 128000  # KB
-
-# Default LLM settings
+  memory_limit: 128000
 llm:
-  default_provider: "lmstudio"
+  default_provider: lmstudio
   temperature: 0.7
   max_tokens: 2048
-
-# Pre-configured LLM endpoints
 providers:
   lmstudio:
-    name: "LM Studio"
-    endpoint: "http://localhost:1234/v1"
-    model_name: "default"
+    name: LM Studio
+    endpoint: http://localhost:1234/v1
+    model_name: default
     temperature: 0.7
     max_tokens: 2048
-
-# Evaluation settings
 evaluation:
   max_attempts: 10
-  show_hidden_tests: false
-
-# Paths
+  show_hidden_tests: true
 paths:
-  challenges: "challenges"
-  database: "data/evocode.db"
-
-# Streamlit settings
+  challenges: challenges
+  database: data/evocode.db
 streamlit:
-  page_title: "EvoCode"
-  page_icon: "🧬"
-  layout: "wide"
+  page_title: EvoCode
+  page_icon: 🧬
+  layout: wide
