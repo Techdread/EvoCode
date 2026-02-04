@@ -362,9 +362,10 @@ with tab_history:
             status_emoji = "✅" if batch["status"] == "completed" and batch["successful_runs"] == batch["total_runs"] else "🔄" if batch["status"] == "running" else "⚠️"
 
             pass_rate = (batch["successful_runs"] / batch["completed_runs"] * 100) if batch["completed_runs"] > 0 else 0
+            batch_name = batch["name"] or f"Batch #{batch['id']}"
 
             with st.expander(
-                f"{status_emoji} {batch['name'] or f'Batch #{batch[\"id\"]}'} - "
+                f"{status_emoji} {batch_name} - "
                 f"{batch['successful_runs']}/{batch['total_runs']} passed ({pass_rate:.0f}%)"
             ):
                 col1, col2, col3, col4 = st.columns(4)
