@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import streamlit as st
+import pandas as pd
 import yaml
 import time
 
@@ -219,25 +220,85 @@ if st.button("Start Evaluation", type="primary", use_container_width=True):
             with results_container.container():
                 st.subheader("Attempt History")
 
-                for attempt in result.attempts:
-                    status_icon = "✅" if attempt.passed else "❌"
-                    with st.expander(f"{status_icon} Attempt {attempt.attempt_number} - Fitness: {attempt.fitness:.0%}"):
+                # Tabs for different views
+                tab_attempts, tab_evolution, tab_tests = st.tabs(["All Attempts", "Code Evolution", "Test Details"])
+
+                with tab_attempts:
+                    for attempt in result.attempts:
+                        status_icon = "✅" if attempt.passed else "❌"
+                        with st.expander(f"{status_icon} Attempt {attempt.attempt_number} - Fitness: {attempt.fitness:.0%}", expanded=(attempt.attempt_number == result.attempts_used)):
+                            col1, col2, col3 = st.columns(3)
+                            passed = sum(1 for t in attempt.test_results if t.passed)
+                            total = len(attempt.test_results)
+                            col1.metric("Tests Passed", f"{passed}/{total}")
+                            col2.metric("Latency", f"{attempt.llm_response.latency_ms}ms")
+                            col3.metric("Tokens", attempt.llm_response.tokens_prompt + attempt.llm_response.tokens_completion)
+
+                            st.markdown("**Generated Code:**")
+                            st.code(attempt.code, language=challenge.language)
+
+                            # Show all test results
+                            st.markdown("**Test Results:**")
+                            for i, t in enumerate(attempt.test_results):
+                                icon = "✅" if t.passed else "❌"
+                                with st.container():
+                                    input_preview = t.input[:30] + "..." if len(t.input) > 30 else t.input
+                                    if t.passed:
+                                        st.markdown(f"{icon} **Test {i+1}**: `{input_preview}` → `{t.expected}`")
+                                    else:
+                                        st.markdown(f"{icon} **Test {i+1}**: `{input_preview}`")
+                                        st.markdown(f"   Expected: `{t.expected}` | Got: `{t.actual}`")
+                                        if t.execution.stderr:
+                                            st.markdown(f"   Error: `{t.execution.stderr[:100]}`")
+
+                with tab_evolution:
+                    st.markdown("**How the code evolved across attempts:**")
+
+                    for i, attempt in enumerate(result.attempts):
+                        status_icon = "✅" if attempt.passed else "❌"
+                        st.markdown(f"### {status_icon} Attempt {attempt.attempt_number} ({attempt.fitness:.0%})")
+
+                        # Show what changed from previous attempt
+                        if i > 0:
+                            prev_code = result.attempts[i-1].code
+                            if attempt.code != prev_code:
+                                prev_lines = set(prev_code.strip().split('\n'))
+                                curr_lines = set(attempt.code.strip().split('\n'))
+                                added = curr_lines - prev_lines
+                                removed = prev_lines - curr_lines
+                                if added or removed:
+                                    st.markdown(f"*Changed {len(added)} lines added, {len(removed)} lines removed*")
+
                         st.code(attempt.code, language=challenge.language)
 
-                        # Test results summary
-                        passed = sum(1 for t in attempt.test_results if t.passed)
-                        total = len(attempt.test_results)
-                        st.markdown(f"**Tests:** {passed}/{total} passed")
+                        # Show feedback that led to next attempt
+                        if not attempt.passed and i < len(result.attempts) - 1:
+                            failures = [t for t in attempt.test_results if not t.passed]
+                            if failures:
+                                st.markdown("**Feedback given to LLM:**")
+                                st.info(f"{len(failures)} tests failed. First failure: expected '{failures[0].expected}', got '{failures[0].actual}'")
 
-                        # Show failures
-                        failures = [t for t in attempt.test_results if not t.passed]
-                        if failures:
-                            st.markdown("**Failed tests:**")
-                            for f in failures[:3]:
-                                st.markdown(f"- Input: `{f.input[:50]}...` → Expected: `{f.expected}`, Got: `{f.actual}`")
+                        st.markdown("---")
 
-                        # Tokens used
-                        st.markdown(f"**Tokens:** {attempt.llm_response.tokens_prompt} prompt, {attempt.llm_response.tokens_completion} completion")
+                with tab_tests:
+                    st.markdown("**Test results across all attempts:**")
+
+                    # Build test results table
+                    if result.attempts and result.attempts[0].test_results:
+                        test_data = []
+                        for i, tc in enumerate(result.attempts[0].test_results):
+                            row = {
+                                "Test": i + 1,
+                                "Input": tc.input[:25] + "..." if len(tc.input) > 25 else tc.input,
+                                "Expected": tc.expected[:20] if len(tc.expected) <= 20 else tc.expected[:20] + "...",
+                            }
+                            for attempt in result.attempts:
+                                if i < len(attempt.test_results):
+                                    row[f"Att {attempt.attempt_number}"] = "✅" if attempt.test_results[i].passed else "❌"
+                            test_data.append(row)
+
+                        df = pd.DataFrame(test_data)
+                        st.dataframe(df, use_container_width=True, hide_index=True)
 
     except Exception as e:
         st.error(f"Evaluation error: {e}")
@@ -264,12 +325,35 @@ if recent_runs:
             if run["duration_seconds"]:
                 st.text(f"Duration: {run['duration_seconds']:.1f}s")
 
-            # View attempts button
-            if st.button("View Details", key=f"view_{run['run_id']}"):
-                attempts = db.get_attempts(run["run_id"])
-                if attempts:
-                    for attempt in attempts:
-                        st.markdown(f"**Attempt {attempt['attempt_number']}** - Fitness: {attempt['fitness']:.0%}")
+            # Show attempts inline
+            attempts = db.get_attempts(run["run_id"])
+            if attempts:
+                st.markdown("**Attempts:**")
+                for attempt in attempts:
+                    status_icon = "✅" if attempt["fitness"] == 1.0 else "❌"
+                    with st.expander(f"{status_icon} Attempt {attempt['attempt_number']} - Fitness: {attempt['fitness']:.0%}"):
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Latency", f"{attempt['llm_latency_ms']}ms")
+                        col2.metric("Exec Time", f"{attempt['execution_time_ms']}ms")
+                        col3.metric("Tokens", attempt['tokens_prompt'] + attempt['tokens_completion'])
+
+                        st.markdown("**Code:**")
                         st.code(attempt["code"], language=run["language"])
+
+                        # Show feedback/errors if any
+                        if attempt.get("feedback"):
+                            st.markdown("**Feedback:**")
+                            st.warning(attempt["feedback"])
+
+                        # Show test results from database
+                        test_results = db.get_test_results(attempt["id"])
+                        if test_results:
+                            passed = sum(1 for t in test_results if t["passed"])
+                            st.markdown(f"**Test Results:** {passed}/{len(test_results)} passed")
+
+                            for i, tr in enumerate(test_results):
+                                icon = "✅" if tr["passed"] else "❌"
+                                stdout_preview = (tr["stdout"] or "")[:30]
+                                st.markdown(f"{icon} Test {i+1}: output=`{stdout_preview}`")
 else:
     st.info("No evaluation runs yet. Start one above!")
