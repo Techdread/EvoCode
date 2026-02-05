@@ -58,3 +58,4 @@ config.local.yaml
 # Docker volumes (data persisted locally)
 judge0-setup/postgres-data/
 judge0-setup/redis-data/
+*.db-journal
