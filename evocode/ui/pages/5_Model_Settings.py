@@ -29,7 +29,7 @@ def save_config(config: dict):
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
-st.title("⚙️ Settings")
+st.title("⚙️ Model Settings")
 
 db = get_database()
 config = load_config()
