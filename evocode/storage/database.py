@@ -134,9 +134,78 @@ class Database:
         row = self.fetchone("SELECT * FROM llm_models WHERE id = ?", (model_id,))
         return dict(row) if row else None
 
-    def delete_model(self, model_id: int):
-        """Delete an LLM model."""
+    def delete_model(self, model_id: int, cascade: bool = False):
+        """Delete an LLM model.
+
+        Args:
+            model_id: ID of the model to delete
+            cascade: If True, also delete related evaluation runs
+        """
+        if cascade:
+            # Delete related test_results first (via attempts)
+            self.execute("""
+                DELETE FROM test_results WHERE attempt_id IN (
+                    SELECT ea.id FROM evaluation_attempts ea
+                    JOIN evaluation_runs er ON ea.run_id = er.id
+                    WHERE er.model_id = ?
+                )
+            """, (model_id,))
+            # Delete related attempts
+            self.execute("""
+                DELETE FROM evaluation_attempts WHERE run_id IN (
+                    SELECT id FROM evaluation_runs WHERE model_id = ?
+                )
+            """, (model_id,))
+            # Delete related runs
+            self.execute("DELETE FROM evaluation_runs WHERE model_id = ?", (model_id,))
+
         self.execute("DELETE FROM llm_models WHERE id = ?", (model_id,))
+
+    def get_model_run_count(self, model_id: int) -> int:
+        """Get count of evaluation runs for a model."""
+        result = self.fetchone(
+            "SELECT COUNT(*) as count FROM evaluation_runs WHERE model_id = ?",
+            (model_id,)
+        )
+        return result["count"] if result else 0
+
+    def update_model(
+        self,
+        model_id: int,
+        display_name: Optional[str] = None,
+        endpoint: Optional[str] = None,
+        model_name: Optional[str] = None,
+        api_key: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ):
+        """Update an existing LLM model."""
+        updates = []
+        params = []
+
+        if display_name is not None:
+            updates.append("display_name = ?")
+            params.append(display_name)
+        if endpoint is not None:
+            updates.append("endpoint = ?")
+            params.append(endpoint)
+        if model_name is not None:
+            updates.append("model_name = ?")
+            params.append(model_name)
+        if api_key is not None:
+            updates.append("api_key = ?")
+            params.append(api_key if api_key else None)
+        if temperature is not None:
+            updates.append("temperature = ?")
+            params.append(temperature)
+        if max_tokens is not None:
+            updates.append("max_tokens = ?")
+            params.append(max_tokens)
+
+        if updates:
+            sql = f"UPDATE llm_models SET {', '.join(updates)} WHERE id = ?"
+            params.append(model_id)
+            self.execute(sql, tuple(params))
 
     # Challenges CRUD
     def add_challenge(

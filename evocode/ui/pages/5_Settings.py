@@ -126,36 +126,124 @@ with tab1:
         st.info("No models configured yet. Add one above!")
     else:
         for model in models:
-            with st.expander(f"**{model['display_name']}** ({model['provider']})"):
-                st.text(f"Endpoint: {model['endpoint']}")
-                st.text(f"Model: {model['model_name']}")
-                st.text(f"Temperature: {model['temperature']}")
-                st.text(f"Max Tokens: {model['max_tokens']}")
+            run_count = db.get_model_run_count(model["id"])
+            label = f"**{model['display_name']}** ({model['provider']})"
+            if run_count > 0:
+                label += f" - {run_count} runs"
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Test", key=f"test_{model['id']}"):
-                        with st.spinner("Testing..."):
-                            try:
-                                test_config = LLMConfig(
-                                    provider=model["provider"],
-                                    endpoint=model["endpoint"],
-                                    model_name=model["model_name"],
-                                    api_key=model.get("api_key"),
+            with st.expander(label):
+                # Check if we're editing this model
+                editing_key = f"editing_model_{model['id']}"
+                is_editing = st.session_state.get(editing_key, False)
+
+                if is_editing:
+                    # Edit form
+                    with st.form(f"edit_form_{model['id']}"):
+                        edit_display_name = st.text_input(
+                            "Display Name",
+                            value=model["display_name"],
+                        )
+                        edit_endpoint = st.text_input(
+                            "Endpoint URL",
+                            value=model["endpoint"],
+                        )
+                        edit_model_name = st.text_input(
+                            "Model Name",
+                            value=model["model_name"],
+                        )
+                        edit_api_key = st.text_input(
+                            "API Key",
+                            value=model.get("api_key") or "",
+                            type="password",
+                            help="Leave empty to keep existing key",
+                        )
+                        edit_temperature = st.slider(
+                            "Temperature",
+                            0.0, 2.0,
+                            float(model["temperature"]),
+                            0.1,
+                        )
+                        edit_max_tokens = st.number_input(
+                            "Max Tokens",
+                            256, 8192,
+                            int(model["max_tokens"]),
+                            256,
+                        )
+
+                        col_save, col_cancel = st.columns(2)
+                        with col_save:
+                            if st.form_submit_button("Save", type="primary"):
+                                db.update_model(
+                                    model_id=model["id"],
+                                    display_name=edit_display_name,
+                                    endpoint=edit_endpoint,
+                                    model_name=edit_model_name,
+                                    api_key=edit_api_key if edit_api_key else None,
+                                    temperature=edit_temperature,
+                                    max_tokens=edit_max_tokens,
                                 )
-                                provider_instance = create_provider(test_config)
-                                if provider_instance.health_check():
-                                    st.success("Connection OK!")
-                                else:
-                                    st.error("Connection failed")
-                            except Exception as e:
-                                st.error(f"Error: {e}")
+                                st.session_state[editing_key] = False
+                                st.success("Model updated!")
+                                st.rerun()
+                        with col_cancel:
+                            if st.form_submit_button("Cancel"):
+                                st.session_state[editing_key] = False
+                                st.rerun()
+                else:
+                    # Display mode
+                    st.text(f"Endpoint: {model['endpoint']}")
+                    st.text(f"Model: {model['model_name']}")
+                    st.text(f"Temperature: {model['temperature']}")
+                    st.text(f"Max Tokens: {model['max_tokens']}")
 
-                with col2:
-                    if st.button("Delete", key=f"delete_{model['id']}", type="secondary"):
-                        db.delete_model(model["id"])
-                        st.success("Model deleted")
-                        st.rerun()
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        if st.button("Test", key=f"test_{model['id']}"):
+                            with st.spinner("Testing..."):
+                                try:
+                                    test_config = LLMConfig(
+                                        provider=model["provider"],
+                                        endpoint=model["endpoint"],
+                                        model_name=model["model_name"],
+                                        api_key=model.get("api_key"),
+                                    )
+                                    provider_instance = create_provider(test_config)
+                                    if provider_instance.health_check():
+                                        st.success("Connection OK!")
+                                    else:
+                                        st.error("Connection failed")
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+
+                    with col2:
+                        if st.button("Edit", key=f"edit_{model['id']}"):
+                            st.session_state[editing_key] = True
+                            st.rerun()
+
+                    with col3:
+                        delete_key = f"confirm_delete_{model['id']}"
+                        if st.session_state.get(delete_key):
+                            st.warning(f"This will delete {run_count} evaluation runs!")
+                            col_yes, col_no = st.columns(2)
+                            with col_yes:
+                                if st.button("Yes, delete", key=f"yes_del_{model['id']}", type="primary"):
+                                    db.delete_model(model["id"], cascade=True)
+                                    st.session_state[delete_key] = False
+                                    st.success("Model deleted")
+                                    st.rerun()
+                            with col_no:
+                                if st.button("Cancel", key=f"no_del_{model['id']}"):
+                                    st.session_state[delete_key] = False
+                                    st.rerun()
+                        else:
+                            if st.button("Delete", key=f"delete_{model['id']}", type="secondary"):
+                                if run_count > 0:
+                                    st.session_state[delete_key] = True
+                                    st.rerun()
+                                else:
+                                    db.delete_model(model["id"])
+                                    st.success("Model deleted")
+                                    st.rerun()
 
 # ============== Judge0 Tab ==============
 with tab2:
