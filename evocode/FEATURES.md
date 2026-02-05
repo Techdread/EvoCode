@@ -65,6 +65,12 @@ This document tracks planned features, their status, and design decisions.
 - [x] Sequential execution with progress tracking
 - [x] Results table with drill-down
 - [x] Batch history tab
+- [x] Code Review tab in batch history:
+  - [x] Filter by status (All/Passed/Failed)
+  - [x] Show best attempt's code per challenge
+  - [x] Expand to view all attempts
+  - [x] Syntax-highlighted code blocks
+  - [x] Feedback shown between attempts
 
 ---
 
@@ -96,7 +102,31 @@ This document tracks planned features, their status, and design decisions.
 
 ---
 
+## Model Settings (Page 5)
+
+**Status:** ✅ Complete
+
+**Description:** Configure LLM endpoints and Judge0 connection.
+
+### Features
+
+- [x] Add new LLM models
+- [x] Edit existing models (display name, endpoint, model name, API key, temperature, max tokens)
+- [x] Delete models with cascade (removes related evaluation runs)
+- [x] Test model connections
+- [x] Judge0 configuration
+- [x] General settings (max attempts, show hidden tests)
+
+---
+
 ## Changelog
+
+### 2026-02-05
+- Added Code Review tab to batch evaluation history
+- Added Edit button for model settings
+- Fixed model delete foreign key constraint error
+- Renamed Settings to Model Settings
+- Added Challenge Editor with LLM assistance
 
 ### 2024-02-04
 - Added batch evaluation feature (Page 6)
