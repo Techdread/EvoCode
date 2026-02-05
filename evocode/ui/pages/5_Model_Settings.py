@@ -10,6 +10,10 @@ import yaml
 
 from storage import get_database
 from core.llm import LLMConfig, create_provider
+from core.llm.base import (
+    MIN_TOKENS, MAX_TOKENS, DEFAULT_TOKENS, TOKEN_STEP,
+    MIN_TEMPERATURE, MAX_TEMPERATURE, DEFAULT_TEMPERATURE,
+)
 from core.judge import Judge0Client
 
 
@@ -63,8 +67,8 @@ with tab1:
                 help="Model identifier (for LM Studio, use 'default' or specific model name)",
             )
             api_key = st.text_input("API Key (optional)", type="password")
-            temperature = st.slider("Temperature", 0.0, 2.0, 0.7, 0.1)
-            max_tokens = st.number_input("Max Tokens", 256, 8192, 2048, 256)
+            temperature = st.slider("Temperature", MIN_TEMPERATURE, MAX_TEMPERATURE, DEFAULT_TEMPERATURE, 0.1)
+            max_tokens = st.number_input("Max Tokens", MIN_TOKENS, MAX_TOKENS, DEFAULT_TOKENS, TOKEN_STEP)
 
         col_submit, col_test = st.columns(2)
 
@@ -159,15 +163,15 @@ with tab1:
                         )
                         edit_temperature = st.slider(
                             "Temperature",
-                            0.0, 2.0,
+                            MIN_TEMPERATURE, MAX_TEMPERATURE,
                             float(model["temperature"]),
                             0.1,
                         )
                         edit_max_tokens = st.number_input(
                             "Max Tokens",
-                            256, 8192,
+                            MIN_TOKENS, MAX_TOKENS,
                             int(model["max_tokens"]),
-                            256,
+                            TOKEN_STEP,
                         )
 
                         col_save, col_cancel = st.columns(2)

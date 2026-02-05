@@ -4,6 +4,17 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
 
+# Token limits
+MIN_TOKENS = 256
+DEFAULT_TOKENS = 2048
+MAX_TOKENS = 65536  # 8192 * 8
+TOKEN_STEP = 256
+
+# Temperature limits
+MIN_TEMPERATURE = 0.0
+MAX_TEMPERATURE = 2.0
+DEFAULT_TEMPERATURE = 0.7
+
 
 @dataclass
 class LLMConfig:
