@@ -359,13 +359,13 @@ with tab_history:
         st.info("No batch runs yet. Start one in the 'New Batch Run' tab!")
     else:
         for batch in batches:
-            status_emoji = "✅" if batch["status"] == "completed" and batch["successful_runs"] == batch["total_runs"] else "🔄" if batch["status"] == "running" else "⚠️"
+            batch_status_emoji = "✅" if batch["status"] == "completed" and batch["successful_runs"] == batch["total_runs"] else "🔄" if batch["status"] == "running" else "⚠️"
 
             pass_rate = (batch["successful_runs"] / batch["completed_runs"] * 100) if batch["completed_runs"] > 0 else 0
             batch_name = batch["name"] or f"Batch #{batch['id']}"
 
             with st.expander(
-                f"{status_emoji} {batch_name} - "
+                f"{batch_status_emoji} {batch_name} - "
                 f"{batch['successful_runs']}/{batch['total_runs']} passed ({pass_rate:.0f}%)"
             ):
                 col1, col2, col3, col4 = st.columns(4)
@@ -378,20 +378,84 @@ with tab_history:
                 if batch["completed_at"]:
                     st.text(f"Completed: {batch['completed_at']}")
 
-                # Show individual runs in this batch
+                # Get batch runs
                 batch_runs = db.get_batch_runs(batch["id"])
+
                 if batch_runs:
-                    st.markdown("**Individual Runs:**")
-                    runs_data = []
-                    for run in batch_runs:
-                        status_emoji = "✅" if run["status"] == "success" else "❌" if run["status"] == "failed" else "🔄"
-                        runs_data.append({
-                            "Status": status_emoji,
-                            "Challenge": run["challenge_name"],
-                            "Language": run["language"],
-                            "Difficulty": run["difficulty"],
-                            "Fitness": f"{run['best_fitness']:.0%}",
-                            "Attempts": f"{run['attempts_used']}/{run['max_attempts']}",
-                        })
-                    df = pd.DataFrame(runs_data)
-                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    # Tabs for Summary and Code Review
+                    summary_tab, code_tab = st.tabs(["📊 Summary", "💻 Code Review"])
+
+                    with summary_tab:
+                        runs_data = []
+                        for run in batch_runs:
+                            run_status_emoji = "✅" if run["status"] == "success" else "❌" if run["status"] == "failed" else "🔄"
+                            runs_data.append({
+                                "Status": run_status_emoji,
+                                "Challenge": run["challenge_name"],
+                                "Language": run["language"],
+                                "Difficulty": run["difficulty"],
+                                "Fitness": f"{run['best_fitness']:.0%}",
+                                "Attempts": f"{run['attempts_used']}/{run['max_attempts']}",
+                            })
+                        df = pd.DataFrame(runs_data)
+                        st.dataframe(df, use_container_width=True, hide_index=True)
+
+                    with code_tab:
+                        # Filter options
+                        filter_col1, filter_col2 = st.columns([1, 3])
+                        with filter_col1:
+                            code_filter = st.selectbox(
+                                "Filter",
+                                ["All", "Passed", "Failed"],
+                                key=f"code_filter_{batch['id']}",
+                            )
+
+                        # Filter runs based on selection
+                        filtered_runs = batch_runs
+                        if code_filter == "Passed":
+                            filtered_runs = [r for r in batch_runs if r["status"] == "success"]
+                        elif code_filter == "Failed":
+                            filtered_runs = [r for r in batch_runs if r["status"] == "failed"]
+
+                        if not filtered_runs:
+                            st.info(f"No {code_filter.lower()} runs to display.")
+                        else:
+                            for run in filtered_runs:
+                                run_emoji = "✅" if run["status"] == "success" else "❌"
+                                fitness_pct = f"{run['best_fitness']:.0%}"
+
+                                with st.expander(
+                                    f"{run_emoji} {run['challenge_name']} ({run['language']}) - {fitness_pct}",
+                                    expanded=False,
+                                ):
+                                    # Get attempts for this run
+                                    attempts = db.get_attempts(run["id"])
+
+                                    if not attempts:
+                                        st.warning("No code generated for this run.")
+                                    else:
+                                        # Find best attempt
+                                        best_attempt = max(attempts, key=lambda a: a["fitness"])
+
+                                        st.markdown(f"**Best Attempt** (#{best_attempt['attempt_number']}, Fitness: {best_attempt['fitness']:.0%})")
+                                        st.code(best_attempt["code"], language=run["language"])
+
+                                        # Show all attempts option
+                                        if len(attempts) > 1:
+                                            if st.checkbox(
+                                                f"Show all {len(attempts)} attempts",
+                                                key=f"show_all_{batch['id']}_{run['id']}",
+                                            ):
+                                                st.markdown("---")
+                                                st.markdown("**All Attempts:**")
+                                                for attempt in attempts:
+                                                    attempt_emoji = "✅" if attempt["fitness"] == 1.0 else "❌"
+                                                    st.markdown(
+                                                        f"**{attempt_emoji} Attempt #{attempt['attempt_number']}** - "
+                                                        f"Fitness: {attempt['fitness']:.0%} | "
+                                                        f"Tokens: {attempt['tokens_prompt'] + attempt['tokens_completion']}"
+                                                    )
+                                                    st.code(attempt["code"], language=run["language"])
+
+                                                    if attempt.get("feedback"):
+                                                        st.caption(f"Feedback: {attempt['feedback']}")
