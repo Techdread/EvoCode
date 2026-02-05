@@ -206,11 +206,23 @@ class EvaluationRunner:
 
         # Generate code
         start_time = time.time()
-        llm_response = self.llm.generate(
-            prompt=prompt,
-            system_prompt=self._get_system_prompt(challenge.language),
-            temperature=0.3 if attempt_number == 1 else 0.5,  # Slightly higher temp for retries
-        )
+
+        # Check if using server defaults (LM Studio Direct Mode)
+        use_server_defaults = getattr(self.llm, '_use_server_defaults', False)
+
+        if use_server_defaults:
+            # Let LM Studio use its own settings
+            llm_response = self.llm.generate(
+                prompt=prompt,
+                system_prompt=self._get_system_prompt(challenge.language),
+                use_server_defaults=True,
+            )
+        else:
+            llm_response = self.llm.generate(
+                prompt=prompt,
+                system_prompt=self._get_system_prompt(challenge.language),
+                temperature=0.3 if attempt_number == 1 else 0.5,  # Slightly higher temp for retries
+            )
 
         # Extract code from response
         code = self.llm._extract_code(llm_response.content, challenge.language)

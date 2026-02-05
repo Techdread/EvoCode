@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 from storage import get_database
-from core.llm import LLMConfig, create_provider
+from core.llm import LLMConfig, create_provider, fetch_lmstudio_models
 from core.judge import Judge0Client
 from core.challenges.loader import load_challenges_from_directory
 from core.evaluation import EvaluationRunner
@@ -39,10 +39,6 @@ languages = db.get_distinct_languages()
 
 if not challenges:
     st.warning("No challenges available. Please add challenges first.")
-    st.stop()
-
-if not models:
-    st.warning("No LLM models configured. Please configure a model in Settings first.")
     st.stop()
 
 # Tabs for running new batch vs viewing history
@@ -120,17 +116,72 @@ with tab_new:
 
     # Model selection
     st.markdown("### Select Model")
-    model_options = {m["display_name"]: m["id"] for m in models}
-    selected_model_name = st.selectbox(
-        "Model",
-        options=list(model_options.keys()),
-    )
-    selected_model_id = model_options[selected_model_name]
 
-    # Show model details
-    model_info = db.get_model(selected_model_id)
-    if model_info:
-        st.markdown(f"**Provider:** {model_info['provider']} | **Endpoint:** {model_info['endpoint']}")
+    # LM Studio Direct Mode toggle
+    use_lmstudio_direct = st.checkbox(
+        "🚀 LM Studio Direct Mode",
+        value=False,
+        help="Query LM Studio for available models and use server-side settings",
+    )
+
+    # Variables to track model selection
+    selected_model_id = None
+    model_info = None
+    lmstudio_endpoint = None
+    lmstudio_model_id = None
+    use_server_defaults = False
+
+    if use_lmstudio_direct:
+        # LM Studio Direct Mode
+        st.info("Using LM Studio's settings (temperature, max tokens, etc.)")
+
+        col_endpoint, col_refresh = st.columns([4, 1])
+
+        with col_endpoint:
+            default_endpoint = config.get("llm", {}).get("providers", {}).get("lmstudio", {}).get("endpoint", "http://localhost:1234/v1")
+            lmstudio_endpoint = st.text_input(
+                "LM Studio Endpoint",
+                value=default_endpoint,
+                key="lmstudio_endpoint",
+            )
+
+        with col_refresh:
+            st.markdown("<br>", unsafe_allow_html=True)
+            refresh_clicked = st.button("🔄", key="refresh_models", help="Refresh model list")
+
+        # Fetch models (always fresh - no caching)
+        if lmstudio_endpoint:
+            with st.spinner("Fetching models..."):
+                available_models = fetch_lmstudio_models(lmstudio_endpoint)
+
+            if available_models:
+                model_names = [m.get("id", "unknown") for m in available_models]
+                lmstudio_model_id = st.selectbox(
+                    "Available Models",
+                    options=model_names,
+                    key="lmstudio_model_select",
+                )
+                st.success(f"Found {len(model_names)} model(s)")
+                use_server_defaults = True
+            else:
+                st.error("Could not fetch models. Check if LM Studio is running.")
+                lmstudio_model_id = None
+    else:
+        # Traditional mode - use configured models
+        if not models:
+            st.warning("No LLM models configured. Please configure a model in Model Settings, or enable LM Studio Direct Mode above.")
+        else:
+            model_options = {m["display_name"]: m["id"] for m in models}
+            selected_model_name = st.selectbox(
+                "Configured Model",
+                options=list(model_options.keys()),
+            )
+            selected_model_id = model_options[selected_model_name]
+
+            # Show model details
+            model_info = db.get_model(selected_model_id)
+            if model_info:
+                st.markdown(f"**Provider:** {model_info['provider']} | **Endpoint:** {model_info['endpoint']}")
 
     # Advanced options
     with st.expander("Advanced Options"):
@@ -141,13 +192,19 @@ with tab_new:
             min_value=1,
             max_value=50,
         )
-        temperature = st.slider(
-            "Temperature",
-            0.0,
-            2.0,
-            model_info.get("temperature", 0.7) if model_info else 0.7,
-            0.1,
-        )
+
+        # Only show temperature if not using server defaults
+        if not use_server_defaults:
+            temperature = st.slider(
+                "Temperature",
+                0.0,
+                2.0,
+                model_info.get("temperature", 0.7) if model_info else 0.7,
+                0.1,
+            )
+        else:
+            temperature = None  # Will use server defaults
+
         batch_name = st.text_input(
             "Batch Name (optional)",
             placeholder=f"Batch {datetime.now().strftime('%Y-%m-%d %H:%M')}",
@@ -156,8 +213,13 @@ with tab_new:
     # Start button
     st.markdown("---")
 
+    # Check if we have a valid model selection
+    has_valid_model = (use_lmstudio_direct and lmstudio_model_id) or (not use_lmstudio_direct and selected_model_id)
+
     if not selected_challenge_ids:
         st.warning("Please select at least one challenge to run.")
+    elif not has_valid_model:
+        st.warning("Please select a model to run evaluations.")
     else:
         if st.button("Start Batch Evaluation", type="primary", use_container_width=True):
             # Create progress containers
@@ -187,16 +249,55 @@ with tab_new:
                     st.error(f"Challenges not found in YAML files: {missing}")
                     st.stop()
 
-                # Create LLM provider
-                llm_config = LLMConfig(
-                    provider=model_info["provider"],
-                    endpoint=model_info["endpoint"],
-                    model_name=model_info["model_name"],
-                    api_key=model_info.get("api_key"),
-                    temperature=temperature,
-                    max_tokens=model_info.get("max_tokens", 2048),
-                )
-                llm = create_provider(llm_config)
+                # Create LLM provider based on mode
+                if use_lmstudio_direct:
+                    # LM Studio Direct Mode - create/get minimal model record
+                    # Check if we already have this model in the database
+                    existing_models = db.get_models()
+                    model_record = None
+                    for m in existing_models:
+                        if m["endpoint"] == lmstudio_endpoint and m["model_name"] == lmstudio_model_id:
+                            model_record = m
+                            break
+
+                    if not model_record:
+                        # Create a new model record for tracking
+                        new_model_id = db.add_model(
+                            provider="lmstudio",
+                            model_name=lmstudio_model_id,
+                            endpoint=lmstudio_endpoint,
+                            display_name=f"LM Studio: {lmstudio_model_id}",
+                            api_key=None,
+                            temperature=0.7,  # Default, but won't be used
+                            max_tokens=2048,  # Default, but won't be used
+                        )
+                        selected_model_id = new_model_id
+                    else:
+                        selected_model_id = model_record["id"]
+
+                    # Create config with server defaults
+                    llm_config = LLMConfig(
+                        provider="lmstudio",
+                        endpoint=lmstudio_endpoint,
+                        model_name=lmstudio_model_id,
+                        api_key=None,
+                        temperature=0.7,  # Won't be sent when use_server_defaults=True
+                        max_tokens=2048,  # Won't be sent when use_server_defaults=True
+                    )
+                    llm = create_provider(llm_config)
+                    llm._use_server_defaults = True  # Flag for runner to use
+                else:
+                    # Traditional mode
+                    llm_config = LLMConfig(
+                        provider=model_info["provider"],
+                        endpoint=model_info["endpoint"],
+                        model_name=model_info["model_name"],
+                        api_key=model_info.get("api_key"),
+                        temperature=temperature,
+                        max_tokens=model_info.get("max_tokens", 2048),
+                    )
+                    llm = create_provider(llm_config)
+                    llm._use_server_defaults = False
 
                 # Create Judge0 client
                 judge0_config = config.get("judge0", {})

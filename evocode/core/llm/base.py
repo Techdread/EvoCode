@@ -61,6 +61,7 @@ class BaseLLMProvider(ABC):
         system_prompt: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        use_server_defaults: bool = False,
     ) -> LLMResponse:
         """
         Generate a response from the LLM.
@@ -70,6 +71,7 @@ class BaseLLMProvider(ABC):
             system_prompt: Optional system prompt
             temperature: Override config temperature
             max_tokens: Override config max_tokens
+            use_server_defaults: If True, don't send temp/max_tokens (use server settings)
 
         Returns:
             LLMResponse with generated content and metadata

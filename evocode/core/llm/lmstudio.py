@@ -7,6 +7,29 @@ import requests
 from .base import BaseLLMProvider, LLMConfig, LLMResponse
 
 
+def fetch_lmstudio_models(endpoint: str, timeout: int = 10) -> list[dict]:
+    """
+    Fetch available models from an LM Studio endpoint.
+
+    Args:
+        endpoint: LM Studio API endpoint (e.g., http://localhost:1234/v1)
+        timeout: Request timeout in seconds
+
+    Returns:
+        List of model dicts with 'id' and other metadata
+    """
+    try:
+        response = requests.get(
+            f"{endpoint.rstrip('/')}/models",
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("data", [])
+    except requests.RequestException:
+        return []
+
+
 class LMStudioProvider(BaseLLMProvider):
     """
     LLM provider for LM Studio's OpenAI-compatible API.
@@ -28,8 +51,17 @@ class LMStudioProvider(BaseLLMProvider):
         system_prompt: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        use_server_defaults: bool = False,
     ) -> LLMResponse:
-        """Generate response using LM Studio's chat completions API."""
+        """Generate response using LM Studio's chat completions API.
+
+        Args:
+            prompt: The user prompt
+            system_prompt: Optional system prompt
+            temperature: Override temperature (ignored if use_server_defaults=True)
+            max_tokens: Override max tokens (ignored if use_server_defaults=True)
+            use_server_defaults: If True, don't send temperature/max_tokens - use LM Studio's settings
+        """
         messages = []
 
         if system_prompt:
@@ -40,10 +72,13 @@ class LMStudioProvider(BaseLLMProvider):
         payload = {
             "model": self.config.model_name,
             "messages": messages,
-            "temperature": temperature if temperature is not None else self.config.temperature,
-            "max_tokens": max_tokens if max_tokens is not None else self.config.max_tokens,
             "stream": False,
         }
+
+        # Only add temperature/max_tokens if not using server defaults
+        if not use_server_defaults:
+            payload["temperature"] = temperature if temperature is not None else self.config.temperature
+            payload["max_tokens"] = max_tokens if max_tokens is not None else self.config.max_tokens
 
         start_time = time.time()
         response = self.session.post(
