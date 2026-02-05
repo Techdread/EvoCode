@@ -71,6 +71,12 @@ This document tracks planned features, their status, and design decisions.
   - [x] Expand to view all attempts
   - [x] Syntax-highlighted code blocks
   - [x] Feedback shown between attempts
+- [x] LM Studio Direct Mode:
+  - [x] Toggle to enable direct LM Studio integration
+  - [x] Live model dropdown (queries /v1/models endpoint)
+  - [x] Refresh button to update model list
+  - [x] Uses LM Studio's server-side settings (temp, max_tokens)
+  - [x] Auto-creates model record for tracking
 
 ---
 
@@ -122,6 +128,8 @@ This document tracks planned features, their status, and design decisions.
 ## Changelog
 
 ### 2026-02-05
+- Added LM Studio Direct Mode to batch evaluation
+- Increased max tokens to 65536 and added constants
 - Added Code Review tab to batch evaluation history
 - Added Edit button for model settings
 - Fixed model delete foreign key constraint error
