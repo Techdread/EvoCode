@@ -353,7 +353,24 @@ if recent_runs:
 
                             for i, tr in enumerate(test_results):
                                 icon = "✅" if tr["passed"] else "❌"
-                                stdout_preview = (tr["stdout"] or "")[:30]
-                                st.markdown(f"{icon} Test {i+1}: output=`{stdout_preview}`")
+                                if tr["passed"]:
+                                    # Simple display for passed tests
+                                    stdout_preview = (tr["stdout"] or "")[:30]
+                                    st.markdown(f"{icon} Test {i+1}: output=`{stdout_preview}`")
+                                else:
+                                    # Detailed display for failed tests
+                                    input_val = tr.get("input", "")
+                                    expected_val = tr.get("expected", "")
+                                    actual_val = tr.get("stdout") or "(empty)"
+                                    stderr_val = tr.get("stderr") or ""
+
+                                    st.markdown(f"{icon} **Test {i+1}:**")
+                                    input_preview = input_val[:50] + "..." if len(input_val) > 50 else input_val
+                                    st.markdown(f"   - Input: `{input_preview}`")
+                                    st.markdown(f"   - Expected: `{expected_val}`")
+                                    st.markdown(f"   - Got: `{actual_val}`")
+                                    if stderr_val:
+                                        stderr_preview = stderr_val[:100] + "..." if len(stderr_val) > 100 else stderr_val
+                                        st.markdown(f"   - Error: `{stderr_preview}`")
 else:
     st.info("No evaluation runs yet. Start one above!")

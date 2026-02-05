@@ -427,9 +427,15 @@ class Database:
         return cursor.lastrowid or 0
 
     def get_test_results(self, attempt_id: int) -> list[dict]:
-        """Get all test results for an attempt."""
+        """Get all test results for an attempt with test case details."""
         rows = self.fetchall(
-            "SELECT * FROM test_results WHERE attempt_id = ? ORDER BY test_case_id",
+            """
+            SELECT tr.*, tc.input, tc.expected, tc.is_hidden
+            FROM test_results tr
+            JOIN test_cases tc ON tr.test_case_id = tc.id
+            WHERE tr.attempt_id = ?
+            ORDER BY tr.test_case_id
+            """,
             (attempt_id,),
         )
         return [dict(row) for row in rows]
