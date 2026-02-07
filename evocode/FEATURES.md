@@ -80,6 +80,36 @@ This document tracks planned features, their status, and design decisions.
 
 ---
 
+## Code Playground (Page 8)
+
+**Status:** ✅ Complete
+
+**Description:** Interactive code runner with LLM assistance for debugging and understanding code.
+
+### Features
+
+- [x] Code Editor
+  - [x] Write/paste custom code
+  - [x] Load code from evaluation history
+  - [x] Syntax highlighting
+  - [x] Language selector
+
+- [x] Test Runner
+  - [x] Custom input mode
+  - [x] Load test cases from challenges
+  - [x] Include/exclude hidden tests
+  - [x] Full output display (stdout, stderr, exit code, time, memory)
+  - [x] Pass/fail comparison with expected output
+
+- [x] LLM Assistant
+  - [x] Select from configured models or LM Studio Direct
+  - [x] Quick actions: Explain, Fix Errors, Optimize, Add Tests
+  - [x] Free-form chat about the code
+  - [x] Context includes code and recent test results
+  - [x] Chat history
+
+---
+
 ## Future Ideas
 
 ### Parallel Batch Execution
@@ -128,6 +158,8 @@ This document tracks planned features, their status, and design decisions.
 ## Changelog
 
 ### 2026-02-05
+- Added Code Playground page with LLM assistant
+- Improved failed test display with input/expected/got/error
 - Added LM Studio Direct Mode to batch evaluation
 - Increased max tokens to 65536 and added constants
 - Added Code Review tab to batch evaluation history
