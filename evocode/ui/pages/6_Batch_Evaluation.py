@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 from storage import get_database
-from core.llm import LLMConfig, create_provider, fetch_lmstudio_models
+from core.llm import LLMConfig, create_provider, fetch_lmstudio_models, fetch_openrouter_models, get_openrouter_providers
 from core.judge import Judge0Client
 from core.challenges.loader import load_challenges_from_directory
 from core.evaluation import EvaluationRunner
@@ -117,21 +117,24 @@ with tab_new:
     # Model selection
     st.markdown("### Select Model")
 
-    # LM Studio Direct Mode toggle
-    use_lmstudio_direct = st.checkbox(
-        "🚀 LM Studio Direct Mode",
-        value=False,
-        help="Query LM Studio for available models and use server-side settings",
+    # Model source selection
+    model_source = st.radio(
+        "Model Source",
+        ["Configured Models", "LM Studio Direct", "OpenRouter"],
+        horizontal=True,
+        key="model_source",
     )
 
     # Variables to track model selection
     selected_model_id = None
     model_info = None
-    lmstudio_endpoint = None
-    lmstudio_model_id = None
+    direct_endpoint = None
+    direct_model_id = None
     use_server_defaults = False
+    direct_provider = None
+    direct_api_key = None
 
-    if use_lmstudio_direct:
+    if model_source == "LM Studio Direct":
         # LM Studio Direct Mode
         st.info("Using LM Studio's settings (temperature, max tokens, etc.)")
 
@@ -139,7 +142,7 @@ with tab_new:
 
         with col_endpoint:
             default_endpoint = config.get("llm", {}).get("providers", {}).get("lmstudio", {}).get("endpoint", "http://localhost:1234/v1")
-            lmstudio_endpoint = st.text_input(
+            direct_endpoint = st.text_input(
                 "LM Studio Endpoint",
                 value=default_endpoint,
                 key="lmstudio_endpoint",
@@ -147,29 +150,103 @@ with tab_new:
 
         with col_refresh:
             st.markdown("<br>", unsafe_allow_html=True)
-            refresh_clicked = st.button("🔄", key="refresh_models", help="Refresh model list")
+            st.button("🔄", key="refresh_lmstudio", help="Refresh model list")
 
-        # Fetch models (always fresh - no caching)
-        if lmstudio_endpoint:
+        if direct_endpoint:
             with st.spinner("Fetching models..."):
-                available_models = fetch_lmstudio_models(lmstudio_endpoint)
+                available_models = fetch_lmstudio_models(direct_endpoint)
 
             if available_models:
                 model_names = [m.get("id", "unknown") for m in available_models]
-                lmstudio_model_id = st.selectbox(
+                direct_model_id = st.selectbox(
                     "Available Models",
                     options=model_names,
                     key="lmstudio_model_select",
                 )
                 st.success(f"Found {len(model_names)} model(s)")
                 use_server_defaults = True
+                direct_provider = "lmstudio"
             else:
                 st.error("Could not fetch models. Check if LM Studio is running.")
-                lmstudio_model_id = None
+
+    elif model_source == "OpenRouter":
+        # OpenRouter Mode
+        st.info("Using OpenRouter - access to many models including free ones")
+
+        # API Key
+        openrouter_key = st.text_input(
+            "OpenRouter API Key",
+            value=st.session_state.get("openrouter_api_key", ""),
+            type="password",
+            key="openrouter_key_input",
+            help="Get your key at https://openrouter.ai/keys",
+        )
+
+        if openrouter_key:
+            st.session_state.openrouter_api_key = openrouter_key
+            direct_api_key = openrouter_key
+
+            # Filters
+            col_f1, col_f2, col_f3 = st.columns(3)
+
+            with col_f1:
+                free_only = st.checkbox("Free models only", value=True, key="or_free")
+
+            with col_f2:
+                providers = get_openrouter_providers(openrouter_key)
+                provider_filter = st.selectbox(
+                    "Provider",
+                    options=["All"] + providers,
+                    key="or_provider",
+                )
+
+            with col_f3:
+                search = st.text_input("Search", placeholder="llama, gpt...", key="or_search")
+
+            # Fetch models
+            with st.spinner("Fetching OpenRouter models..."):
+                or_models = fetch_openrouter_models(
+                    api_key=openrouter_key,
+                    free_only=free_only,
+                    provider_filter=provider_filter if provider_filter != "All" else None,
+                    search=search if search else None,
+                )
+
+            if or_models:
+                # Build display options
+                model_options_or = {}
+                for m in or_models:
+                    mid = m.get("id", "unknown")
+                    ctx = m.get("context_length", "?")
+                    name = m.get("name", mid)
+                    display = f"{name} ({ctx} ctx)"
+                    model_options_or[display] = m
+
+                selected_or = st.selectbox(
+                    f"Model ({len(or_models)} available)",
+                    options=list(model_options_or.keys()),
+                    key="or_model_select",
+                )
+
+                if selected_or:
+                    sel_model = model_options_or[selected_or]
+                    direct_model_id = sel_model.get("id")
+                    direct_endpoint = "https://openrouter.ai/api/v1"
+                    direct_provider = "openrouter"
+                    use_server_defaults = True
+
+                    # Show pricing
+                    pricing = sel_model.get("pricing", {})
+                    st.caption(f"Pricing: ${pricing.get('prompt', '?')}/1K prompt, ${pricing.get('completion', '?')}/1K completion")
+            else:
+                st.warning("No models found matching filters.")
+        else:
+            st.warning("Enter your OpenRouter API key to browse models.")
+
     else:
-        # Traditional mode - use configured models
+        # Configured Models
         if not models:
-            st.warning("No LLM models configured. Please configure a model in Model Settings, or enable LM Studio Direct Mode above.")
+            st.warning("No LLM models configured. Add one in Model Settings or use Direct modes above.")
         else:
             model_options = {m["display_name"]: m["id"] for m in models}
             selected_model_name = st.selectbox(
@@ -178,7 +255,6 @@ with tab_new:
             )
             selected_model_id = model_options[selected_model_name]
 
-            # Show model details
             model_info = db.get_model(selected_model_id)
             if model_info:
                 st.markdown(f"**Provider:** {model_info['provider']} | **Endpoint:** {model_info['endpoint']}")
@@ -214,7 +290,7 @@ with tab_new:
     st.markdown("---")
 
     # Check if we have a valid model selection
-    has_valid_model = (use_lmstudio_direct and lmstudio_model_id) or (not use_lmstudio_direct and selected_model_id)
+    has_valid_model = (model_source != "Configured Models" and direct_model_id) or (model_source == "Configured Models" and selected_model_id)
 
     if not selected_challenge_ids:
         st.warning("Please select at least one challenge to run.")
@@ -250,44 +326,44 @@ with tab_new:
                     st.stop()
 
                 # Create LLM provider based on mode
-                if use_lmstudio_direct:
-                    # LM Studio Direct Mode - create/get minimal model record
-                    # Check if we already have this model in the database
+                if model_source in ["LM Studio Direct", "OpenRouter"]:
+                    # Direct Mode - create/get minimal model record for tracking
                     existing_models = db.get_models()
                     model_record = None
                     for m in existing_models:
-                        if m["endpoint"] == lmstudio_endpoint and m["model_name"] == lmstudio_model_id:
+                        if m["endpoint"] == direct_endpoint and m["model_name"] == direct_model_id:
                             model_record = m
                             break
 
                     if not model_record:
                         # Create a new model record for tracking
+                        display_prefix = "LM Studio" if direct_provider == "lmstudio" else "OpenRouter"
                         new_model_id = db.add_model(
-                            provider="lmstudio",
-                            model_name=lmstudio_model_id,
-                            endpoint=lmstudio_endpoint,
-                            display_name=f"LM Studio: {lmstudio_model_id}",
-                            api_key=None,
-                            temperature=0.7,  # Default, but won't be used
-                            max_tokens=2048,  # Default, but won't be used
+                            provider=direct_provider,
+                            model_name=direct_model_id,
+                            endpoint=direct_endpoint,
+                            display_name=f"{display_prefix}: {direct_model_id}",
+                            api_key=direct_api_key,
+                            temperature=0.7,
+                            max_tokens=2048,
                         )
                         selected_model_id = new_model_id
                     else:
                         selected_model_id = model_record["id"]
 
-                    # Create config with server defaults
+                    # Create config
                     llm_config = LLMConfig(
-                        provider="lmstudio",
-                        endpoint=lmstudio_endpoint,
-                        model_name=lmstudio_model_id,
-                        api_key=None,
-                        temperature=0.7,  # Won't be sent when use_server_defaults=True
-                        max_tokens=2048,  # Won't be sent when use_server_defaults=True
+                        provider=direct_provider,
+                        endpoint=direct_endpoint,
+                        model_name=direct_model_id,
+                        api_key=direct_api_key,
+                        temperature=0.7,
+                        max_tokens=2048,
                     )
                     llm = create_provider(llm_config)
-                    llm._use_server_defaults = True  # Flag for runner to use
+                    llm._use_server_defaults = use_server_defaults
                 else:
-                    # Traditional mode
+                    # Configured Models mode
                     llm_config = LLMConfig(
                         provider=model_info["provider"],
                         endpoint=model_info["endpoint"],

@@ -53,11 +53,20 @@ with tab1:
 
         with col1:
             display_name = st.text_input("Display Name", placeholder="My Local Model")
-            provider = st.selectbox("Provider", ["lmstudio", "openai", "local"])
+            provider = st.selectbox("Provider", ["lmstudio", "openrouter", "openai", "local"])
+
+            # Set default endpoint based on provider
+            if provider == "openrouter":
+                default_endpoint = "https://openrouter.ai/api/v1"
+                endpoint_help = "OpenRouter API endpoint"
+            else:
+                default_endpoint = "http://localhost:1234/v1"
+                endpoint_help = "OpenAI-compatible API endpoint"
+
             endpoint = st.text_input(
                 "Endpoint URL",
-                value="http://localhost:1234/v1",
-                help="OpenAI-compatible API endpoint",
+                value=default_endpoint,
+                help=endpoint_help,
             )
 
         with col2:

@@ -4,6 +4,7 @@ from typing import Type
 
 from .base import BaseLLMProvider, LLMConfig
 from .lmstudio import LMStudioProvider
+from .openrouter import OpenRouterProvider
 
 
 # Registry of available providers
@@ -11,6 +12,7 @@ _PROVIDERS: dict[str, Type[BaseLLMProvider]] = {
     "lmstudio": LMStudioProvider,
     "openai": LMStudioProvider,  # OpenAI-compatible, works with LM Studio
     "local": LMStudioProvider,   # Alias for local models
+    "openrouter": OpenRouterProvider,
 }
 
 
