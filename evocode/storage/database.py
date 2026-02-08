@@ -99,6 +99,21 @@ class Database:
                     if "duplicate column name" not in str(e).lower():
                         raise
 
+        # Run batch model migration
+        batch_model_migration = MIGRATIONS_DIR / "003_batch_model.sql"
+        if batch_model_migration.exists():
+            # Check if model_id column exists in batch_runs
+            cursor = conn.execute("PRAGMA table_info(batch_runs)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "model_id" not in columns:
+                try:
+                    sql = batch_model_migration.read_text()
+                    conn.executescript(sql)
+                    conn.commit()
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        raise
+
     # LLM Models CRUD
     def add_model(
         self,
@@ -457,13 +472,18 @@ class Database:
         return [dict(row) for row in rows]
 
     # Batch Runs CRUD
-    def create_batch(self, name: Optional[str] = None, total_runs: int = 0) -> int:
+    def create_batch(
+        self,
+        name: Optional[str] = None,
+        total_runs: int = 0,
+        model_id: Optional[int] = None,
+    ) -> int:
         """Create a new batch run."""
         sql = """
-            INSERT INTO batch_runs (name, total_runs, status)
-            VALUES (?, ?, 'running')
+            INSERT INTO batch_runs (name, total_runs, model_id, status)
+            VALUES (?, ?, ?, 'running')
         """
-        cursor = self.execute(sql, (name, total_runs))
+        cursor = self.execute(sql, (name, total_runs, model_id))
         return cursor.lastrowid or 0
 
     def update_batch(
@@ -505,9 +525,22 @@ class Database:
         return dict(row) if row else None
 
     def get_batches(self, limit: int = 50) -> list[dict]:
-        """Get recent batch runs."""
+        """Get recent batch runs with model info."""
         rows = self.fetchall(
-            "SELECT * FROM batch_runs ORDER BY created_at DESC LIMIT ?", (limit,)
+            """
+            SELECT b.*,
+                   m.display_name as model_name,
+                   m.endpoint as model_endpoint,
+                   m.model_name as model_identifier,
+                   m.temperature as model_temperature,
+                   m.max_tokens as model_max_tokens,
+                   m.provider as model_provider
+            FROM batch_runs b
+            LEFT JOIN llm_models m ON b.model_id = m.id
+            ORDER BY b.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
         )
         return [dict(row) for row in rows]
 

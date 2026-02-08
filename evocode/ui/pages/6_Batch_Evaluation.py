@@ -322,6 +322,7 @@ with tab_new:
                 batch_id = db.create_batch(
                     name=batch_display_name,
                     total_runs=len(selected_challenge_ids),
+                    model_id=selected_model_id,
                 )
 
                 # Create runner
@@ -475,9 +476,51 @@ with tab_history:
                 col3.metric("Passed", batch["successful_runs"])
                 col4.metric("Failed", batch["failed_runs"])
 
+                # Model info section
+                st.markdown("---")
+                st.markdown("**Model:**")
+                if batch.get("model_name"):
+                    model_col1, model_col2 = st.columns(2)
+                    with model_col1:
+                        st.text(f"Name: {batch['model_name']}")
+                        st.text(f"Provider: {batch.get('model_provider', 'Unknown')}")
+                        st.text(f"Endpoint: {batch.get('model_endpoint', 'Unknown')}")
+                    with model_col2:
+                        # Check if using server defaults (LM Studio Direct)
+                        if batch.get("model_name", "").startswith("LM Studio:"):
+                            st.text("Settings: Server Defaults (LM Studio Direct)")
+                        else:
+                            temp = batch.get('model_temperature', 'N/A')
+                            max_tok = batch.get('model_max_tokens', 'N/A')
+                            st.text(f"Temperature: {temp}")
+                            st.text(f"Max Tokens: {max_tok}")
+                else:
+                    st.text("Model: Unknown (older batch)")
+
+                st.markdown("---")
+
+                # Timing info
                 st.text(f"Started: {batch['created_at']}")
                 if batch["completed_at"]:
                     st.text(f"Completed: {batch['completed_at']}")
+                    # Calculate duration
+                    try:
+                        from datetime import datetime
+                        start = datetime.fromisoformat(batch['created_at'].replace(' ', 'T'))
+                        end = datetime.fromisoformat(batch['completed_at'].replace(' ', 'T'))
+                        duration = end - start
+                        total_seconds = int(duration.total_seconds())
+                        minutes, seconds = divmod(total_seconds, 60)
+                        hours, minutes = divmod(minutes, 60)
+                        if hours > 0:
+                            duration_str = f"{hours}h {minutes}m {seconds}s"
+                        elif minutes > 0:
+                            duration_str = f"{minutes}m {seconds}s"
+                        else:
+                            duration_str = f"{seconds}s"
+                        st.text(f"Duration: {duration_str}")
+                    except Exception:
+                        pass
 
                 # Get batch runs
                 batch_runs = db.get_batch_runs(batch["id"])
