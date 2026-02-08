@@ -13,6 +13,7 @@ from typing import Optional
 from storage import get_database
 from core.llm import LLMConfig, create_provider
 from core.judge import LANGUAGE_IDS
+from ui.components import model_selector
 
 
 # Supported languages for challenges
@@ -144,18 +145,18 @@ challenges = db.get_challenges()
 with st.sidebar:
     st.header("🤖 LLM Assistant")
 
-    if not models:
-        st.warning("No LLM models configured. Add one in Settings to enable AI assistance.")
-        selected_model_id = None
-    else:
-        model_options = {m["display_name"]: m["id"] for m in models}
-        selected_model_name = st.selectbox(
-            "Select Model",
-            options=list(model_options.keys()),
-            key="llm_model_selector",
-        )
-        selected_model_id = model_options[selected_model_name]
+    # Use reusable model selector component
+    llm_config, selected_model_id, use_server_defaults = model_selector(
+        key_prefix="editor",
+        show_configured=True,
+        show_lmstudio=True,
+        show_openrouter=True,
+        db=db,
+    )
 
+    llm_ready = llm_config is not None
+
+    if llm_ready:
         st.markdown("---")
         st.markdown("**Available Actions:**")
         st.markdown("- Generate test cases")
@@ -163,6 +164,8 @@ with st.sidebar:
         st.markdown("- Suggest edge cases")
         st.markdown("- Generate sample solution")
         st.markdown("- Validate with LLM")
+    else:
+        st.info("Select a model source above to enable AI assistance.")
 
 # Main content
 col_select, col_new = st.columns([3, 1])
@@ -274,19 +277,10 @@ if st.session_state.editor_challenge:
         )
     with assist_col:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("✨ Improve", key="improve_desc", disabled=not selected_model_id):
-            if selected_model_id and challenge.get("description"):
+        if st.button("✨ Improve", key="improve_desc", disabled=not llm_ready):
+            if llm_config and challenge.get("description"):
                 with st.spinner("Improving description..."):
                     try:
-                        model_info = db.get_model(selected_model_id)
-                        llm_config = LLMConfig(
-                            provider=model_info["provider"],
-                            endpoint=model_info["endpoint"],
-                            model_name=model_info["model_name"],
-                            api_key=model_info.get("api_key"),
-                            temperature=0.7,
-                            max_tokens=2048,
-                        )
                         llm = create_provider(llm_config)
 
                         prompt = f"""Improve this coding challenge description to be clearer and more complete.
@@ -300,7 +294,7 @@ Original description:
 
 Return ONLY the improved description, no other text."""
 
-                        response = llm.generate(prompt)
+                        response = llm.generate(prompt, use_server_defaults=use_server_defaults)
                         st.session_state.editor_challenge["description"] = response.content
                         st.rerun()
                     except Exception as e:
@@ -367,19 +361,10 @@ Return ONLY the improved description, no other text."""
                 test_cases.append({"input": "", "expected": ""})
                 st.rerun()
         with col_generate:
-            if st.button("🤖 Generate Tests", key="gen_visible", disabled=not selected_model_id):
-                if selected_model_id and challenge.get("description"):
+            if st.button("🤖 Generate Tests", key="gen_visible", disabled=not llm_ready):
+                if llm_config and challenge.get("description"):
                     with st.spinner("Generating test cases..."):
                         try:
-                            model_info = db.get_model(selected_model_id)
-                            llm_config = LLMConfig(
-                                provider=model_info["provider"],
-                                endpoint=model_info["endpoint"],
-                                model_name=model_info["model_name"],
-                                api_key=model_info.get("api_key"),
-                                temperature=0.7,
-                                max_tokens=2048,
-                            )
                             llm = create_provider(llm_config)
 
                             prompt = f"""Generate 3 test cases for this coding challenge.
@@ -401,7 +386,7 @@ Format your response as YAML list:
 
 Return ONLY the YAML list, no other text."""
 
-                            response = llm.generate(prompt)
+                            response = llm.generate(prompt, use_server_defaults=use_server_defaults)
                             # Parse response
                             try:
                                 new_tests = yaml.safe_load(response.content)
@@ -453,19 +438,10 @@ Return ONLY the YAML list, no other text."""
                 hidden_tests.append({"input": "", "expected": ""})
                 st.rerun()
         with col_generate:
-            if st.button("🤖 Generate Edge Cases", key="gen_hidden", disabled=not selected_model_id):
-                if selected_model_id and challenge.get("description"):
+            if st.button("🤖 Generate Edge Cases", key="gen_hidden", disabled=not llm_ready):
+                if llm_config and challenge.get("description"):
                     with st.spinner("Generating edge cases..."):
                         try:
-                            model_info = db.get_model(selected_model_id)
-                            llm_config = LLMConfig(
-                                provider=model_info["provider"],
-                                endpoint=model_info["endpoint"],
-                                model_name=model_info["model_name"],
-                                api_key=model_info.get("api_key"),
-                                temperature=0.7,
-                                max_tokens=2048,
-                            )
                             llm = create_provider(llm_config)
 
                             prompt = f"""Generate 5 EDGE CASE test cases for this coding challenge.
@@ -487,7 +463,7 @@ Format your response as YAML list:
 
 Return ONLY the YAML list, no other text."""
 
-                            response = llm.generate(prompt)
+                            response = llm.generate(prompt, use_server_defaults=use_server_defaults)
                             try:
                                 new_tests = yaml.safe_load(response.content)
                                 if isinstance(new_tests, list):
@@ -525,19 +501,10 @@ Return ONLY the YAML list, no other text."""
             st.session_state.show_preview = True
 
     with col_solution:
-        if st.button("🧪 Gen Solution", use_container_width=True, disabled=not selected_model_id):
-            if selected_model_id and challenge.get("description"):
+        if st.button("🧪 Gen Solution", use_container_width=True, disabled=not llm_ready):
+            if llm_config and challenge.get("description"):
                 with st.spinner("Generating sample solution..."):
                     try:
-                        model_info = db.get_model(selected_model_id)
-                        llm_config = LLMConfig(
-                            provider=model_info["provider"],
-                            endpoint=model_info["endpoint"],
-                            model_name=model_info["model_name"],
-                            api_key=model_info.get("api_key"),
-                            temperature=0.3,
-                            max_tokens=2048,
-                        )
                         llm = create_provider(llm_config)
 
                         prompt = f"""Write a solution for this coding challenge.
@@ -552,7 +519,7 @@ Template:
 
 Return ONLY the solution code, no explanations."""
 
-                        response = llm.generate(prompt)
+                        response = llm.generate(prompt, use_server_defaults=use_server_defaults)
                         st.session_state.generated_solution = response.content
                     except Exception as e:
                         st.error(f"Error: {e}")

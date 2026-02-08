@@ -9,8 +9,9 @@ import streamlit as st
 import yaml
 
 from storage import get_database
-from core.llm import LLMConfig, create_provider, fetch_lmstudio_models
+from core.llm import LLMConfig, create_provider
 from core.judge import Judge0Client, LANGUAGE_IDS
+from ui.components import model_selector
 
 
 def load_config() -> dict:
@@ -292,63 +293,16 @@ with col_llm:
     st.subheader("🤖 LLM Assistant")
     st.markdown("*Ask questions about your code*")
 
-    # Model selection
-    models = db.get_models()
-
-    use_lmstudio_direct = st.checkbox(
-        "LM Studio Direct",
-        value=False,
-        key="playground_lmstudio_direct",
+    # Use reusable model selector component
+    llm_config, model_id, use_server_defaults = model_selector(
+        key_prefix="playground",
+        show_configured=True,
+        show_lmstudio=True,
+        show_openrouter=True,
+        db=db,
     )
 
-    llm_ready = False
-    llm_config = None
-
-    if use_lmstudio_direct:
-        default_endpoint = config.get("llm", {}).get("providers", {}).get("lmstudio", {}).get("endpoint", "http://localhost:1234/v1")
-        lmstudio_endpoint = st.text_input(
-            "Endpoint",
-            value=default_endpoint,
-            key="playground_endpoint",
-        )
-
-        if lmstudio_endpoint:
-            available_models = fetch_lmstudio_models(lmstudio_endpoint)
-            if available_models:
-                model_names = [m.get("id", "unknown") for m in available_models]
-                selected_model = st.selectbox(
-                    "Model",
-                    options=model_names,
-                    key="playground_model_select",
-                )
-                llm_config = LLMConfig(
-                    provider="lmstudio",
-                    endpoint=lmstudio_endpoint,
-                    model_name=selected_model,
-                )
-                llm_ready = True
-            else:
-                st.warning("Could not fetch models")
-    else:
-        if models:
-            model_options = {m["display_name"]: m for m in models}
-            selected_model_name = st.selectbox(
-                "Model",
-                options=list(model_options.keys()),
-                key="playground_configured_model",
-            )
-            model_info = model_options[selected_model_name]
-            llm_config = LLMConfig(
-                provider=model_info["provider"],
-                endpoint=model_info["endpoint"],
-                model_name=model_info["model_name"],
-                api_key=model_info.get("api_key"),
-                temperature=model_info.get("temperature", 0.7),
-                max_tokens=model_info.get("max_tokens", 2048),
-            )
-            llm_ready = True
-        else:
-            st.info("No models configured. Enable LM Studio Direct or add a model in Settings.")
+    llm_ready = llm_config is not None
 
     st.markdown("---")
 
@@ -438,6 +392,7 @@ Please provide a helpful, concise answer."""
                     response = llm.generate(
                         prompt=prompt,
                         system_prompt="You are a helpful programming assistant. Provide clear, concise answers about code. When suggesting fixes, show the corrected code.",
+                        use_server_defaults=use_server_defaults,
                     )
 
                     # Add to chat history
